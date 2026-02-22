@@ -252,15 +252,20 @@ export default function JudgesPage() {
                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/40 cursor-pointer"
                     onClick={() =>
                       setAssignedTeamIds((prev) =>
-                        checked ? prev.filter((id) => id !== team.id) : [...prev, team.id]
+                        prev.includes(team.id)
+                          ? prev.filter((id) => id !== team.id)
+                          : [...prev, team.id]
                       )
                     }
                   >
                     <Checkbox
                       checked={checked}
+                      onClick={(e) => e.stopPropagation()}
                       onCheckedChange={() =>
                         setAssignedTeamIds((prev) =>
-                          checked ? prev.filter((id) => id !== team.id) : [...prev, team.id]
+                          prev.includes(team.id)
+                            ? prev.filter((id) => id !== team.id)
+                            : [...prev, team.id]
                         )
                       }
                     />

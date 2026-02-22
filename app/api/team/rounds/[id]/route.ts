@@ -102,8 +102,7 @@ async function GETHandler(
 
         // Get all active subtasks from this track that aren't already selected
         const subs = await Subtask.find({
-          round_id: round._id,
-          track: (team.track_id as any)?.name || undefined,
+          track_id: (team.track_id as any)?._id || undefined,
           is_active: true,
           _id: { $nin: selectedSubtaskIds },
         })
@@ -117,19 +116,22 @@ async function GETHandler(
           description: s.description,
         }));
       } else {
-        // For other rounds, get subtasks normally
-        const subs = await Subtask.find({
-          round_id: id,
-          is_active: true,
-        })
-          .select("_id title description")
-          .lean();
+        // For other rounds, get subtasks by the team's track
+        const trackId = (team.track_id as any)?._id;
+        if (trackId) {
+          const subs = await Subtask.find({
+            track_id: trackId,
+            is_active: true,
+          })
+            .select("_id title description")
+            .lean();
 
-        availableOptions = subs.map((s: any) => ({
-          _id: s._id,
-          title: s.title,
-          description: s.description,
-        }));
+          availableOptions = subs.map((s: any) => ({
+            _id: s._id,
+            title: s.title,
+            description: s.description,
+          }));
+        }
       }
     }
 

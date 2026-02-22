@@ -66,10 +66,9 @@ async function GETHandler(
   // Get all teams assigned to this judge
   const assignedTeamIds = judgeSession.judge.teams_assigned || [];
 
-  // Get teams that are assigned to this judge AND have this round accessible
+  // Get all teams assigned to this judge (regardless of rounds_accessible)
   const teams = await Team.find({
     _id: { $in: assignedTeamIds },
-    rounds_accessible: round_id,
   });
 
   // Build detailed response for each team
@@ -123,8 +122,15 @@ async function GETHandler(
               description: (selection.selected as any).description,
             }
           : null,
-        has_submission: !!submission,
-        submission_time: submission?.submitted_at || null,
+        submission: submission
+          ? {
+              id: submission._id.toString(),
+              github_link: submission.github_link || null,
+              file_url: submission.file_url || null,
+              overview: submission.overview || null,
+              submitted_at: submission.submitted_at,
+            }
+          : null,
         score: scoreData,
       };
     }),

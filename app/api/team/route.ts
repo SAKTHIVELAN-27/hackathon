@@ -18,6 +18,8 @@ import RoundOptions from "@/models/RoundOptions";
 import Submission from "@/models/Submission";
 import { proxy } from "@/lib/proxy";
 
+export const dynamic = "force-dynamic";
+
 async function GETHandler(request: NextRequest) {
   try {
     const { teamId } = await getTeamSession();
@@ -36,10 +38,20 @@ async function GETHandler(request: NextRequest) {
       (r: any) => r._id ?? r,
     );
 
-    const activeRound = await Round.findOne({
+    // Find the active round: for Round 1, show if active even if not yet in rounds_accessible
+    // For Round 2+, require explicit access (shortlisting)
+    let activeRound = await Round.findOne({
       _id: { $in: accessibleRoundIds },
       is_active: true,
     });
+
+    // Fallback: if no accessible active round, check if Round 1 is globally active
+    if (!activeRound) {
+      const globalActiveRound = await Round.findOne({ is_active: true });
+      if (globalActiveRound && globalActiveRound.round_number === 1) {
+        activeRound = globalActiveRound;
+      }
+    }
 
     // Fetch all submissions for this team
     const submissions = await Submission.find({

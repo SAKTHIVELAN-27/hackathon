@@ -200,48 +200,54 @@ async function POSTHandler(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Find the submission for this team and round
-  const submission = await Submission.findOne({
-    team_id,
-    round_id,
-  }).sort({ submitted_at: -1 });
+  try {
+    // Find the submission for this team and round
+    // Create a stub submission if none exists so judges can always score
+    let submission = await Submission.findOne({
+      team_id,
+      round_id,
+    }).sort({ submitted_at: -1 });
 
-  if (!submission) {
-    return NextResponse.json(
-      { error: "No submission found for this team" },
-      { status: 404 },
+    if (!submission) {
+      submission = await Submission.create({
+        team_id,
+        round_id,
+      });
+    }
+
+    // Create or update score using submission_id
+    const doc = await Score.findOneAndUpdate(
+      {
+        judge_id: ids.judge._id,
+        submission_id: submission._id,
+      },
+      {
+        score: scoreValue,
+        remarks: remarks || "",
+        status: "scored",
+        updated_at: new Date(),
+      },
+      {
+        upsert: true,
+        returnDocument: "after",
+        setDefaultsOnInsert: true,
+      },
     );
+
+    return NextResponse.json({
+      message: "Score saved successfully",
+      data: {
+        id: doc._id.toString(),
+        score: doc.score,
+        remarks: doc.remarks,
+        status: doc.status,
+        updated_at: doc.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error saving score (POST):", error);
+    return NextResponse.json({ error: "Failed to save score" }, { status: 500 });
   }
-
-  // Create or update score using submission_id
-  const doc = await Score.findOneAndUpdate(
-    {
-      judge_id: ids.judge._id,
-      submission_id: submission._id,
-    },
-    {
-      score: scoreValue,
-      remarks: remarks || "",
-      status: "scored",
-      updated_at: new Date(),
-    },
-    {
-      upsert: true,
-      new: true,
-      setDefaultsOnInsert: true,
-    },
-  );
-
-  return NextResponse.json({
-    message: "Score saved successfully",
-    data: {
-      id: doc._id.toString(),
-      score: doc.score,
-      remarks: doc.remarks,
-      status: doc.status,
-      updated_at: doc.updated_at,
-    },
-  });
 }
 
 export const POST = proxy(POSTHandler, ["judge", "admin"]);
@@ -299,53 +305,54 @@ async function PATCHHandler(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Find the submission for this team and round
-  const submission = await Submission.findOne({
-    team_id,
-    round_id,
-  }).sort({ submitted_at: -1 });
+  try {
+    // Find the submission for this team and round
+    // Create a stub submission if none exists so judges can always score
+    let submission = await Submission.findOne({
+      team_id,
+      round_id,
+    }).sort({ submitted_at: -1 });
 
-  if (!submission) {
-    return NextResponse.json(
-      { error: "No submission found for this team" },
-      { status: 404 },
+    if (!submission) {
+      submission = await Submission.create({
+        team_id,
+        round_id,
+      });
+    }
+
+    // Update (or create if missing) the score — upsert handles both cases
+    const updated = await Score.findOneAndUpdate(
+      {
+        judge_id: ids.judge._id,
+        submission_id: submission._id,
+      },
+      {
+        score: scoreValue,
+        remarks: remarks || "",
+        status: "scored",
+        updated_at: new Date(),
+      },
+      {
+        upsert: true,
+        returnDocument: "after",
+        setDefaultsOnInsert: true,
+      },
     );
+
+    return NextResponse.json({
+      message: "Score updated successfully",
+      data: {
+        id: updated._id.toString(),
+        score: updated.score,
+        remarks: updated.remarks,
+        status: updated.status,
+        updated_at: updated.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error saving score (PATCH):", error);
+    return NextResponse.json({ error: "Failed to save score" }, { status: 500 });
   }
-
-  // Update the score
-  const updated = await Score.findOneAndUpdate(
-    {
-      judge_id: ids.judge._id,
-      submission_id: submission._id,
-    },
-    {
-      score: scoreValue,
-      remarks: remarks || "",
-      status: "scored",
-      updated_at: new Date(),
-    },
-    {
-      new: true,
-    },
-  );
-
-  if (!updated) {
-    return NextResponse.json(
-      { error: "Score entry not found. Use POST to create." },
-      { status: 404 },
-    );
-  }
-
-  return NextResponse.json({
-    message: "Score updated successfully",
-    data: {
-      id: updated._id.toString(),
-      score: updated.score,
-      remarks: updated.remarks,
-      status: updated.status,
-      updated_at: updated.updated_at,
-    },
-  });
 }
 
 export const PATCH = proxy(PATCHHandler, ["judge", "admin"]);
