@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import type { SubtaskSummary } from "./SubtaskCard";
 import { toast } from "sonner";
 import {
-  useSubmitProjectMutation,
-  useUpdateSubmissionMutation,
+  useSubmitRoundSubmissionMutation,
+  useUpdateRoundSubmissionMutation,
 } from "@/lib/redux/api/teamApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,10 +52,10 @@ export default function SubmissionForm({
   const [final, setFinal] = useState(false);
 
   // RTK Query hooks
-  const [submitProject, { isLoading: isSubmitting }] =
-    useSubmitProjectMutation();
-  const [updateSubmission, { isLoading: isUpdating }] =
-    useUpdateSubmissionMutation();
+  const [submitRoundSubmission, { isLoading: isSubmitting }] =
+    useSubmitRoundSubmissionMutation();
+  const [updateRoundSubmission, { isLoading: isUpdating }] =
+    useUpdateRoundSubmissionMutation();
 
   const isLoading = isSubmitting || isUpdating;
   const canSubmit = (githubUrl || docUrl) && !isLoading && !final;
@@ -73,10 +73,10 @@ export default function SubmissionForm({
       };
 
       if (isEditing) {
-        await updateSubmission(payload).unwrap();
+        await updateRoundSubmission(payload).unwrap();
         toast.success("Submission updated successfully!");
       } else {
-        await submitProject(payload).unwrap();
+        await submitRoundSubmission(payload).unwrap();
         toast.success("Project submitted successfully!");
       }
 

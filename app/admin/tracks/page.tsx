@@ -41,7 +41,6 @@ export default function TracksPage() {
 
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Admin", href: "/admin" },
       { label: "Tracks", href: "/admin/tracks" },
     ]);
     setMounted(true);

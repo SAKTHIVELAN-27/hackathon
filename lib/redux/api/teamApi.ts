@@ -29,9 +29,9 @@ export const teamApi = baseApi.injectEndpoints({
       { roundId: string; subtaskId: string }
     >({
       query: ({ roundId, subtaskId }) => ({
-        url: "/team/selection",
+        url: `/team/rounds/${roundId}/subtask`,
         method: "POST",
-        body: { roundId, subtaskId },
+        body: { subtaskId },
       }),
       invalidatesTags: (result, error, { roundId }) => [
         { type: "Round", id: roundId },

@@ -12,8 +12,8 @@ export interface IRoundOptions extends Document {
 const RoundOptionsSchema = new Schema<IRoundOptions>({
   team_id: { type: Schema.Types.ObjectId, ref: "Team" },
   round_id: { type: Schema.Types.ObjectId, ref: "Round" },
-  options: [{ type: Schema.Types.ObjectId, ref: "SubTask", default: [] }],
-  selected: { type: Schema.Types.ObjectId, ref: "SubTask", default: null },
+  options: [{ type: Schema.Types.ObjectId, ref: "Subtask", default: [] }],
+  selected: { type: Schema.Types.ObjectId, ref: "Subtask", default: null },
   selected_at: { type: Date },
   created_at: { type: Date, default: Date.now },
 });

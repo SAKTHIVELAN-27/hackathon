@@ -245,65 +245,86 @@ export default function Page() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold sm:text-3xl">
-        Select Subtask
-      </h1>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold sm:text-3xl">
+            Round {round.round_number} — Choose Your Subtask
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Select one of the two assigned subtasks to work on. This cannot be changed after confirmation.
+          </p>
+        </div>
+        {round.end_time && (
+          <div className="rounded-lg border border-border bg-muted/50 p-4 shrink-0">
+            <div className="mb-1 flex items-center gap-2 text-muted-foreground">
+              <Timer className="h-4 w-4" />
+              <span className="text-xs font-medium">TIME REMAINING</span>
+            </div>
+            <p className={`text-lg font-bold ${
+              timeRemaining === "Time's up!" ? "text-destructive" : "text-primary"
+            }`}>
+              {timeRemaining || "Calculating..."}
+            </p>
+          </div>
+        )}
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {initialSubtasks?.map((task: any) => (
-          <Card
-            key={task._id}
-            className="cursor-pointer transition hover:bg-muted/50"
-            onClick={() => setSelectedSubtaskId(task._id)}
-          >
-            <CardHeader>
-              <CardTitle className="text-base">{task.title}</CardTitle>
-              {task.track && (
-                <Badge variant="secondary" className="w-fit">
-                  {task.track}
-                </Badge>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {task.description}
-              </p>
-              <Button
-                size="lg"
-                onClick={async () => {
-                  try {
-                    await selectSubtask({
-                      roundId: id,
-                      subtaskId: task._id,
-                    }).unwrap();
-                    toast.success("Subtask selected successfully!");
-                  } catch (error: any) {
-                    console.error("Failed to select subtask:", error);
-                    toast.error(
-                      "Failed to select subtask: " +
-                        (error?.data?.error || "Unknown error"),
-                    );
-                  }
-                }}
-                disabled={isSelecting}
-              >
-                {selectedSubtaskId === task._id ? "Selected" : "Select"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {(!initialSubtasks || initialSubtasks.length === 0) ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Clock className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+            <p className="font-medium">No subtasks assigned yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              The admin hasn&apos;t assigned your subtask options for this round yet. Check back soon.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {initialSubtasks.map((task: any) => (
+            <Card
+              key={task._id}
+              className={`transition border-2 ${
+                selectedSubtaskId === task._id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <CardHeader>
+                <CardTitle className="text-base">{task.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">{task.description}</p>
+                <Button
+                  className="w-full"
+                  variant={selectedSubtaskId === task._id ? "default" : "outline"}
+                  onClick={() => setSelectedSubtaskId(task._id)}
+                >
+                  {selectedSubtaskId === task._id ? "✓ Selected" : "Select this task"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {selectedSubtaskId && (
-        <Button
-          size="lg"
-          onClick={() =>
-            selectSubtask({ roundId: id, subtaskId: selectedSubtaskId! })
-          }
-          disabled={isSelecting}
-        >
-          {isSelecting ? "Confirming..." : "Confirm Selection"}
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            size="lg"
+            onClick={async () => {
+              try {
+                await selectSubtask({ roundId: id, subtaskId: selectedSubtaskId }).unwrap();
+                toast.success("Subtask confirmed! You can now submit your solution.");
+              } catch (error: any) {
+                toast.error("Failed to confirm: " + (error?.data?.error || "Unknown error"));
+              }
+            }}
+            disabled={isSelecting}
+          >
+            {isSelecting ? "Confirming..." : "Confirm Selection →"}
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -299,26 +299,52 @@ export default function JudgeRoundDetailsPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {selectedTeam?.submission && (
-            <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-              {selectedTeam.submission.github_link && (
-                <a
-                  href={ensureAbsoluteUrl(
-                    selectedTeam.submission.github_link,
-                  )}
-                  target="_blank"
-                  className="text-sm text-primary hover:underline"
-                >
-                  GitHub Repository
-                </a>
-              )}
-              {selectedTeam.submission.submission_text && (
-                <p className="text-sm whitespace-pre-wrap">
-                  {selectedTeam.submission.submission_text}
-                </p>
-              )}
-            </div>
-          )}
+          <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Submission</p>
+            {selectedTeam?.submission ? (
+              <div className="space-y-2">
+                {selectedTeam.submission.github_link && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-20 shrink-0">GitHub</span>
+                    <a
+                      href={ensureAbsoluteUrl(selectedTeam.submission.github_link)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-primary hover:underline truncate"
+                    >
+                      {selectedTeam.submission.github_link}
+                    </a>
+                  </div>
+                )}
+                {selectedTeam.submission.file_url && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-20 shrink-0">Drive / File</span>
+                    <a
+                      href={ensureAbsoluteUrl(selectedTeam.submission.file_url)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-primary hover:underline truncate"
+                    >
+                      {selectedTeam.submission.file_url}
+                    </a>
+                  </div>
+                )}
+                {selectedTeam.submission.overview && (
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Overview / Comments</span>
+                    <p className="text-sm whitespace-pre-wrap bg-background rounded p-2 border">
+                      {selectedTeam.submission.overview}
+                    </p>
+                  </div>
+                )}
+                {!selectedTeam.submission.github_link && !selectedTeam.submission.file_url && !selectedTeam.submission.overview && (
+                  <p className="text-sm text-muted-foreground italic">No submission details provided.</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Team has not submitted yet — you can still record a score.</p>
+            )}
+          </div>
 
           <div className="space-y-4">
             <div className="space-y-2">

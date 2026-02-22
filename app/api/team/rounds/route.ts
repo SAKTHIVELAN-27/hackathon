@@ -16,6 +16,8 @@ import RoundOptions from "@/models/RoundOptions";
 import Submission from "@/models/Submission";
 import { proxy } from "@/lib/proxy";
 
+export const dynamic = "force-dynamic";
+
 export async function GEThandler(request: NextRequest) {
   try {
     const { teamId } = await getTeamSession();

@@ -4,7 +4,6 @@ import Team from "@/models/Team";
 import Submission from "@/models/Submission";
 import Score from "@/models/Score";
 import RoundOptions from "@/models/RoundOptions";
-import Subtask from "@/models/Subtask";
 import { proxy } from "@/lib/proxy";
 
 // GET: Fetch teams for a round, grouped by track with subtask history
@@ -132,47 +131,9 @@ async function POSTHandler(
       { $pull: { rounds_accessible: roundId } },
     );
 
-    // For each shortlisted team, create/update RoundOptions with subtask allocation
-    const shortlistedTeams = await Team.find({ _id: { $in: teamIds } })
-      .populate("track_id")
-      .lean();
-
-    for (const team of shortlistedTeams) {
-      const trackId = (team as any).track_id._id;
-
-      // Get all active subtasks for this track
-      const subtasks = await Subtask.find({
-        track_id: trackId,
-        is_active: true,
-      }).lean();
-
-      if (subtasks.length > 0) {
-        // Get 2 random subtasks as options (or fewer if track has < 2 subtasks)
-        const selectedOptions = subtasks
-          .sort(() => Math.random() - 0.5)
-          .slice(0, Math.min(2, subtasks.length))
-          .map((s: any) => s._id);
-
-        // Create or update RoundOptions
-        await RoundOptions.findOneAndUpdate(
-          { team_id: team._id, round_id: roundId },
-          {
-            team_id: team._id,
-            round_id: roundId,
-            options: selectedOptions,
-            selected: null,
-            selected_at: null,
-          },
-          { upsert: true, new: true },
-        );
-      }
-    }
-
     return NextResponse.json({
-      message:
-        "Teams shortlisted for round successfully and round options allocated",
+      message: "Teams shortlisted for round successfully",
       shortlisted_count: teamIds.length,
-      options_allocated: teamIds.length,
     });
   } catch (error) {
     console.error("Error shortlisting teams:", error);

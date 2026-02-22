@@ -45,14 +45,16 @@ async function POSTHandler(
       return NextResponse.json({ error: "round not found" }, { status: 404 });
     }
 
-    // Check if submission deadline has passed
-    const now = new Date();
-    const endTime = new Date(round.end_time);
-    if (now > endTime) {
-      return NextResponse.json(
-        { error: "submission deadline has passed" },
-        { status: 403 },
-      );
+    // Check if submission deadline has passed (skip check if no end_time set)
+    if (round.end_time) {
+      const now = new Date();
+      const endTime = new Date(round.end_time);
+      if (now > endTime) {
+        return NextResponse.json(
+          { error: "submission deadline has passed" },
+          { status: 403 },
+        );
+      }
     }
 
     const doc = await Submission.create({
@@ -104,14 +106,16 @@ async function PATCHHandler(
       return NextResponse.json({ error: "round not found" }, { status: 404 });
     }
 
-    // Check if submission deadline has passed
-    const now = new Date();
-    const endTime = new Date(round.end_time);
-    if (now > endTime) {
-      return NextResponse.json(
-        { error: "submission deadline has passed" },
-        { status: 403 },
-      );
+    // Check if submission deadline has passed (skip check if no end_time set)
+    if (round.end_time) {
+      const now = new Date();
+      const endTime = new Date(round.end_time);
+      if (now > endTime) {
+        return NextResponse.json(
+          { error: "submission deadline has passed" },
+          { status: 403 },
+        );
+      }
     }
 
     // Find existing submission for this team and round
