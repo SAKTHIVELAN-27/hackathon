@@ -31,11 +31,11 @@ export default function TeamDetailsPage() {
   const router = useRouter();
   const teamId = params.teamId as string;
 
-  const { data: details, isLoading } = useGetTeamDetailsQuery(teamId);
+  const { data: details, isLoading, isError } = useGetTeamDetailsQuery(teamId);
 
   // Set breadcrumbs when team data is loaded
   useEffect(() => {
-    if (details?.team) {
+    if (details) {
       setBreadcrumbs([
         { label: "Teams", href: "/admin/teams" },
         { label: details.team_name, href: `/admin/teams/${teamId}` },
@@ -44,8 +44,24 @@ export default function TeamDetailsPage() {
   }, [details, teamId]);
 
   if (isLoading) return <div className="p-8">Loading team details...</div>;
+  if (isError)
+    return (
+      <div className="p-8 space-y-4">
+        <Button variant="outline" className="gap-2" onClick={() => router.push("/admin/teams")}>
+          <ArrowLeft className="size-4" /> Back to Teams
+        </Button>
+        <p className="text-destructive">Failed to load team. The team may not exist or there was a server error.</p>
+      </div>
+    );
   if (!details || !details.team_name)
-    return <div className="p-8">Team not found</div>;
+    return (
+      <div className="p-8 space-y-4">
+        <Button variant="outline" className="gap-2" onClick={() => router.push("/admin/teams")}>
+          <ArrowLeft className="size-4" /> Back to Teams
+        </Button>
+        <p>Team not found.</p>
+      </div>
+    );
 
   const team = details;
   const history: any[] = details.history ?? [];
@@ -64,9 +80,12 @@ export default function TeamDetailsPage() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-4">
+        <Button variant="outline" size="icon" onClick={() => router.push("/admin/teams")}>
+          <ArrowLeft className="size-4" />
+        </Button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
-            {team.team_name ?? team.name}
+            {team.team_name}
             <Badge variant="outline">{team.track}</Badge>
           </h1>
         </div>

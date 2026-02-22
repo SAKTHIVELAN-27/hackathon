@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/loading-state";
@@ -47,6 +47,7 @@ import {
   useToggleRoundStatusMutation,
   useGetRoundTeamsQuery,
   useUpdateRoundTeamsMutation,
+  useAllocateSubtasksToTeamsMutation,
 } from "@/lib/redux/api/adminApi";
 import type { RoundTeam } from "@/lib/redux/api/types";
 import { toast } from "sonner";
@@ -67,6 +68,7 @@ export default function RoundDetailsPage() {
   const [toggleRoundStatus] = useToggleRoundStatusMutation();
   const { data: roundTeamsData, isLoading: roundTeamsLoading } = useGetRoundTeamsQuery(roundId);
   const [updateRoundTeams] = useUpdateRoundTeamsMutation();
+  const [allocateSubtasks] = useAllocateSubtasksToTeamsMutation();
 
   // Local State for forms
   const [instructions, setInstructions] = useState("");
@@ -88,7 +90,10 @@ export default function RoundDetailsPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeletingSubtask, setIsDeletingSubtask] = useState(false);
   const [allowedTeamIds, setAllowedTeamIds] = useState<Set<string>>(new Set());
+  const [subtaskAssignments, setSubtaskAssignments] = useState<Record<string, { slot1: string; slot2: string }>>({});
   const [isSavingShortlist, setIsSavingShortlist] = useState(false);
+  const [isSavingAllotments, setIsSavingAllotments] = useState(false);
+  const [submissionToggled, setSubmissionToggled] = useState(false);
 
   const loading = roundLoading || subtasksLoading || roundTeamsLoading;
 
@@ -129,10 +134,20 @@ export default function RoundDetailsPage() {
   useEffect(() => {
     if (roundTeamsData?.teams_by_track) {
       const allowed = new Set<string>();
+      const assignments: Record<string, { slot1: string; slot2: string }> = {};
       Object.values(roundTeamsData.teams_by_track).forEach((teams) => {
-        teams.forEach((t) => { if (t.allowed) allowed.add(t.id); });
+        teams.forEach((t) => {
+          if (t.allowed) allowed.add(t.id);
+          if (t.subtask_history?.options?.length) {
+            assignments[t.id] = {
+              slot1: t.subtask_history.options[0]?.id ?? "",
+              slot2: t.subtask_history.options[1]?.id ?? "",
+            };
+          }
+        });
       });
       setAllowedTeamIds(allowed);
+      setSubtaskAssignments(assignments);
     }
   }, [roundTeamsData]);
 
@@ -234,9 +249,9 @@ export default function RoundDetailsPage() {
   const handleToggleSubmission = async (checked: boolean) => {
     setSubmissionToggled(checked);
     try {
-      await toggleRoundStatus({
+      await updateRound({
         id: roundId,
-        action: "toggle-submission",
+        body: { is_active: checked },
       }).unwrap();
       toast.success(`Submissions ${checked ? "enabled" : "disabled"}`);
     } catch (e) {
@@ -258,11 +273,34 @@ export default function RoundDetailsPage() {
     setIsSavingShortlist(true);
     try {
       await updateRoundTeams({ roundId, teamIds: [...allowedTeamIds] }).unwrap();
-      toast.success("Shortlist saved — options allocated for shortlisted teams");
+      toast.success("Shortlist saved");
     } catch {
       toast.error("Failed to save shortlist");
     } finally {
       setIsSavingShortlist(false);
+    }
+  };
+
+  const handleSaveAllotments = async () => {
+    const allocations = Object.entries(subtaskAssignments)
+      .filter(([, v]) => v.slot1 || v.slot2)
+      .map(([teamId, v]) => ({
+        teamId,
+        subtaskIds: [v.slot1, v.slot2].filter(Boolean),
+      }));
+
+    if (allocations.length === 0) {
+      toast.error("No subtasks selected to save");
+      return;
+    }
+    setIsSavingAllotments(true);
+    try {
+      await allocateSubtasks({ roundId, allocations }).unwrap();
+      toast.success(`Subtask options assigned to ${allocations.length} team(s)`);
+    } catch {
+      toast.error("Failed to save subtask allotments");
+    } finally {
+      setIsSavingAllotments(false);
     }
   };
 
@@ -308,7 +346,6 @@ export default function RoundDetailsPage() {
             )}
           </Button>
         </div>
-      </div>
       <Card className="w-full">
         <CardHeader className="flex w-full justify-between">
           <CardTitle>Round Settings</CardTitle>
@@ -482,7 +519,7 @@ export default function RoundDetailsPage() {
             <div className="space-y-3">
               {allSubtasks.map((task: any) => (
                 <div
-                  key={task._id}
+                  key={task.id}
                   className="flex items-start justify-between p-4 rounded-lg border bg-muted/20"
                 >
                   <div>
@@ -510,7 +547,7 @@ export default function RoundDetailsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteSubtask(task._id)}
+                      onClick={() => handleDeleteSubtask(task.id)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="size-4" />
@@ -526,8 +563,110 @@ export default function RoundDetailsPage() {
       <Card className="w-full">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
+            <CardTitle className="flex items-center gap-2"><Users className="size-5 text-muted-foreground" /> Subtask Allotment</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Manually assign a subtask to each team for this round.</p>
+          </div>
+          <Button onClick={handleSaveAllotments} disabled={isSavingAllotments} className="gap-2">
+            <Save className="size-4" />{isSavingAllotments ? "Saving..." : "Save Allotments"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {Object.keys(teamsByTrack).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No teams found.</p>
+          ) : (
+            Object.entries(teamsByTrack).map(([trackName, teams]) => {
+              const trackSubtasks = allSubtasks.filter(
+                (s: any) => s.track_id === teams[0]?.track_id
+              );
+              return (
+                <div key={trackName}>
+                  <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+                    <Badge variant="outline">{trackName}</Badge>
+                    <span className="text-muted-foreground text-sm font-normal">
+                      {teams.filter((t) => subtaskAssignments[t.id]).length} / {teams.length} assigned
+                    </span>
+                  </h3>
+                  <div className="rounded-xl border border-border/50 overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border/50 hover:bg-transparent">
+                          <TableHead className="font-semibold">Team</TableHead>
+                          <TableHead className="font-semibold">Team&apos;s Choice</TableHead>
+                          <TableHead className="font-semibold">Assign Options (max 2)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teams.map((team) => (
+                          <TableRow key={team.id} className="border-border/50">
+                            <TableCell className="font-medium">{team.team_name}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {team.subtask_history?.selected?.title ?? <span className="italic">Not chosen yet</span>}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-2 min-w-[200px]">
+                                <Select
+                                  value={subtaskAssignments[team.id]?.slot1 ?? ""}
+                                  onValueChange={(val) =>
+                                    setSubtaskAssignments((prev) => ({
+                                      ...prev,
+                                      [team.id]: { ...prev[team.id], slot1: val },
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Option 1..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {trackSubtasks.length === 0 ? (
+                                      <SelectItem value="__none" disabled>No subtasks for this track</SelectItem>
+                                    ) : (
+                                      trackSubtasks.map((s: any) => (
+                                        <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={subtaskAssignments[team.id]?.slot2 ?? ""}
+                                  onValueChange={(val) =>
+                                    setSubtaskAssignments((prev) => ({
+                                      ...prev,
+                                      [team.id]: { ...prev[team.id], slot2: val },
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Option 2..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {trackSubtasks.length === 0 ? (
+                                      <SelectItem value="__none" disabled>No subtasks for this track</SelectItem>
+                                    ) : (
+                                      trackSubtasks.map((s: any) => (
+                                        <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
             <CardTitle className="flex items-center gap-2"><Users className="size-5 text-muted-foreground" /> Shortlist Teams</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Check teams to shortlist. Saving assigns random subtask options to shortlisted teams.</p>
+            <p className="text-sm text-muted-foreground mt-1">Check teams to shortlist for this round.</p>
           </div>
           <Button onClick={handleSaveShortlist} disabled={isSavingShortlist} className="gap-2">
             <Save className="size-4" />{isSavingShortlist ? "Saving..." : "Save Shortlist"}

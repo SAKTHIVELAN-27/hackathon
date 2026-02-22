@@ -106,6 +106,20 @@ export const adminApi = baseApi.injectEndpoints({
         "Team",
       ],
     }),
+    allocateSubtasksToTeams: builder.mutation<
+      { message: string; count: number },
+      { roundId: string; allocations: { teamId: string; subtaskIds: string[] }[] }
+    >({
+      query: ({ roundId, allocations }) => ({
+        url: `/admin/rounds/${roundId}/allocate`,
+        method: "POST",
+        body: { allocations },
+      }),
+      invalidatesTags: (result, error, { roundId }) => [
+        { type: "Round", id: roundId },
+        "Team",
+      ],
+    }),
     getTracks: builder.query<Track[], void>({
       query: () => "/admin/tracks",
       providesTags: ["Track"],
@@ -309,6 +323,7 @@ export const {
   useDeleteRoundMutation,
   useGetRoundTeamsQuery,
   useUpdateRoundTeamsMutation,
+  useAllocateSubtasksToTeamsMutation,
   useGetTracksQuery,
   useCreateTrackMutation,
   useUpdateTrackMutation,

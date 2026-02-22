@@ -21,13 +21,14 @@ async function POSTHandler(
       );
     }
 
-    // Update judge's teams_assigned field
-    await Judge.updateOne({ _id: judgeId }, { teams_assigned: teamIds });
+    // Deduplicate and update judge's teams_assigned field
+    const uniqueTeamIds = [...new Set(teamIds.map((id: string) => id.toString()))];
+    await Judge.updateOne({ _id: judgeId }, { teams_assigned: uniqueTeamIds });
 
     return NextResponse.json({
       message: `Updated team assignments for Judge ${judgeId}`,
       success: true,
-      assignedCount: teamIds.length,
+      assignedCount: uniqueTeamIds.length,
     });
   } catch (error) {
     console.error("Error assigning teams:", error);

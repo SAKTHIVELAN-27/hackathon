@@ -30,7 +30,7 @@ function RoundStatsRow({
   onView: (id: string) => void;
 }) {
   const { data: teams = [], isLoading: loadingTeams } =
-    useGetJudgeAssignedTeamsQuery(round._id);
+    useGetJudgeAssignedTeamsQuery(round.id);
 
   const assignedTeams = teams.length;
   const scored = teams.filter((t: any) => t.status === "scored").length;
@@ -77,7 +77,7 @@ function RoundStatsRow({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => onView(round._id)}
+          onClick={() => onView(round.id)}
         >
           View Teams
         </Button>
@@ -169,7 +169,7 @@ export default function JudgeRoundsPage() {
                 ) : (
                   rounds.map((round: any) => (
                     <RoundStatsRow
-                      key={round._id}
+                      key={round.id}
                       round={round}
                       onView={(id) => router.push(`/judge/rounds/${id}`)}
                     />

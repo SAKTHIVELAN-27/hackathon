@@ -19,7 +19,7 @@ interface ISeedResult {
 // Configuration - Easily change these values
 const SEED_CONFIG = {
   admin: {
-    email: "vt.gowreesh43@gmail.com",
+    email: "sakthivelanss02@gmail.com",
     role: "admin",
   },
   judge: {

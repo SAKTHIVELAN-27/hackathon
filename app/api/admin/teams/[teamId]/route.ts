@@ -10,6 +10,8 @@ import RoundOptions from "@/models/RoundOptions";
 import { proxy } from "@/lib/proxy";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const updateTeamSchema = z.object({
   team_name: z.string().min(2).optional(),
   email: z.string().email().optional(),

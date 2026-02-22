@@ -35,9 +35,8 @@ export default function TeamDashboardPage() {
   const totalScore = dashboardData?.total_score ?? 0;
   const latestRoundScore = dashboardData?.latest_round_score;
 
-  const endTime = activeRound?.end_time
-    ? new Date(activeRound.end_time).toISOString()
-    : new Date(Date.now() + 1000 * 60 * 60).toISOString();
+  const startTime = activeRound?.start_time ?? null;
+  const endTime = activeRound?.end_time ?? null;
 
   return (
     <div className="space-y-8">
@@ -102,13 +101,24 @@ export default function TeamDashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-yellow-600">
-                  <CountDown endTime={endTime} />
+                  {endTime ? (
+                    <CountDown endTime={new Date(endTime).toISOString()} />
+                  ) : (
+                    <span className="text-muted-foreground text-base font-medium">No deadline set</span>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {activeRound?.is_active
-                    ? "Until round ends"
-                    : "Next round starts soon"}
-                </p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    {startTime
+                      ? `Start: ${new Date(startTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                      : "Start: Not set"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {endTime
+                      ? `End: ${new Date(endTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                      : "End: Not set"}
+                  </p>
+                </div>
               </>
             )}
           </CardContent>
